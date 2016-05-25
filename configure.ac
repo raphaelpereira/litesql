@@ -39,8 +39,8 @@ AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
+# AC_FUNC_MALLOC
+# AC_FUNC_REALLOC
 
 AC_CHECK_FUNCS([gettimeofday memset strchr strdup strrchr strstr strtol strtof strtoll atof localtime_r mktime])
 
