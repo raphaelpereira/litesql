@@ -203,6 +203,15 @@ string Time::asString(string format) const {
 DateTime::DateTime(time_t t) {
     value =  (t==0) ? time(NULL) : t;
 }
+int DateTime::year() const {
+    return TimeStruct(value).year();
+}
+int DateTime::month() const {
+    return TimeStruct(value).month();
+}
+int DateTime::day() const {
+    return TimeStruct(value).day();
+}
 int DateTime::hour() const {
     return TimeStruct(value).hour();
 }
