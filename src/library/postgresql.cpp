@@ -43,8 +43,12 @@ void PostgreSQL::Cursor::setCacheSize(int v) {
         cacheSize = v;
 }
 PostgreSQL::Cursor::Cursor(const PostgreSQL& p, string q) 
-    : pq(p), name("cursor" + toString(sid++)), cachePos(0) {
-    pq.begin();
+    : pq(p), name("cursor" + toString(sid++)), cachePos(0),
+      createdTransaction(false) {
+    if (!pq.transaction) {
+        createdTransaction = true;
+        pq.begin();
+    }
     delete pq.execute("DECLARE \"" + name + "\" CURSOR FOR "+ q);
 }
 Record PostgreSQL::Cursor::fetchOne() {
@@ -60,9 +64,12 @@ Record PostgreSQL::Cursor::fetchOne() {
     return cache[cachePos++];
 }
 PostgreSQL::Cursor::~Cursor() {
-    delete pq.execute("CLOSE "+name+";");
+    if (pq.transaction)
+        delete pq.execute("CLOSE "+name+";");
+    if (createdTransaction)
+        pq.commit();
 }
-PostgreSQL::PostgreSQL(const string& connInfo) : conn(NULL), transaction(false) {
+PostgreSQL::PostgreSQL(const string& connInfo) : conn(NULL), transaction(0) {
     Split params(connInfo,";");
     string pq_connInfo;
     for (size_t i = 0; i < params.size(); i++) {
@@ -90,20 +97,28 @@ bool PostgreSQL::supportsSequences() const {
 void PostgreSQL::begin() const {
   if (!transaction) {
     delete execute("BEGIN;");
-    transaction = true;
+  } else {
+    delete execute("SAVEPOINT level_" + toString(transaction) + ";");
   }
+  transaction++;
 }
 void PostgreSQL::commit() const {
-    if (transaction) {
+    if (!transaction) return;
+    if (transaction == 1) {
         delete execute("COMMIT;");
-        transaction = false;
+    } else {
+        delete execute("RELEASE SAVEPOINT level_" + toString(transaction-1) + ";");
     }
+    transaction--;
 }
 void PostgreSQL::rollback() const {
-    if (transaction) {
+    if (!transaction) return;
+    if (transaction == 1) {
       delete execute("ROLLBACK;");
-      transaction = false;
+    } else {
+      delete execute("ROLLBACK TO SAVEPOINT level_" + toString(transaction-1) + ";");
     }
+    transaction--;
 }
 Backend::Result* PostgreSQL::execute(const string& _query) const {
     string query = _query + ";";

@@ -21,7 +21,7 @@ using namespace std;
 /** PostgreSQL - backend */
 class PostgreSQL : public Backend {
     PGconn *conn;
-    mutable bool transaction;
+    mutable int transaction;
 public:
     /** PostgreSQL - result */
     class Result : public Backend::Result {
@@ -44,6 +44,7 @@ public:
         std::string name;
         Records cache;
         size_t cachePos;
+        bool createdTransaction;
     public:
         virtual void setCacheSize(int v);
         Cursor(const PostgreSQL& p, std::string q);
